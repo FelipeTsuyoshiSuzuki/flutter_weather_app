@@ -1,13 +1,12 @@
+import 'dart:core';
 import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:weather_app/components/list_item.dart';
 import 'package:weather_app/services/weather_sevice.dart';
 import 'package:weather_app/utils/theme_provider.dart';
-
-import '../models/weather_model.dart';
-import '../utils/global_theme.dart';
+import 'package:weather_app/utils/global_theme.dart';
+import 'package:weather_app/models/weather_model.dart';
 
 class WeatherView extends StatefulWidget {
   const WeatherView({super.key});
@@ -18,10 +17,10 @@ class WeatherView extends StatefulWidget {
 
 class _WeatherViewState extends State<WeatherView> {
   final _service = WeatherService(apiKey: "2899bd476324bf6f3ac7a31fab4d5c75");
-  String? _cityName;
   final _textController = TextEditingController();
-  final Set<String> cidades = {
-    'São Paulo',
+  late List<Weather> weatherList;
+  late Future<List<Weather>?> _weatherList;
+  final List<String> _cities = [
     'Rio de Janeiro',
     'Brasília',
     'Fortaleza',
@@ -50,28 +49,39 @@ class _WeatherViewState extends State<WeatherView> {
     'Los Angeles',
     'Bangkok',
     'Calcutá'
-  };
-  late Future<Weather?> _weather;
+  ];
 
   @override
   void initState() {
     super.initState();
-    log("App iniciado");
-    _weather = _fetchWeather();
+    weatherList = [];
+    _weatherList = populateWeatherList();
   }
 
-  void _searchWeather({required String searchCity}) {
-    log("$searchCity");
-  }
-
-   Future<Weather?> _fetchWeather() async {
-    String cityName = await _service.getCurrentCity();
+  Future<List<Weather>?> _searchWeather({required String searchCity}) async {
     try {
-      return await _service.getWeather(cityName);
+      var response = await _service.getWeather(searchCity);
+      weatherList.insert(0, response);
     } catch (e) {
       log(e.toString());
-      return null;
     }
+    return weatherList;
+  }
+
+  Future<List<Weather>?> populateWeatherList() async {
+    if(weatherList.isEmpty) {
+      String cityName = await _service.getCurrentCity();
+      _cities.insert(0, cityName);
+    }
+    for (int i = 0; i < _cities.length; i++) {
+      try {
+        var response = await _service.getWeather(_cities[i]);
+        weatherList.add(response);
+      } catch (e) {
+        log(e.toString());
+      }
+    }
+    return weatherList;
   }
 
   @override
@@ -83,8 +93,7 @@ class _WeatherViewState extends State<WeatherView> {
         : Icons.sunny;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Clima", style: TextStyle(
-            fontFamily: "Quicksand")),
+        title: const Text("Clima", style: TextStyle(fontFamily: "Quicksand")),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -99,16 +108,16 @@ class _WeatherViewState extends State<WeatherView> {
         ],
       ),
       body: FutureBuilder(
-        future: _weather,
+        future: _weatherList,
         builder: (context, snapshot) {
           switch (snapshot.connectionState) {
             case ConnectionState.none:
-            // TODO: Handle this case.
+              return const Center(
+                child: Text("Error"),
+              );
             case ConnectionState.waiting:
-            // TODO: Handle this case.
-            case ConnectionState.active:
-              return Center(child: CircularProgressIndicator());
-            case ConnectionState.done:
+              return const Center(child: CircularProgressIndicator());
+            default:
               return Padding(
                 padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
                 child: Column(
@@ -124,8 +133,10 @@ class _WeatherViewState extends State<WeatherView> {
                               border: const OutlineInputBorder(),
                               suffixIcon: IconButton(
                                   onPressed: () {
-                                    _searchWeather(
-                                        searchCity: _textController.text);
+                                    setState(() {
+                                      _weatherList = _searchWeather(
+                                          searchCity: _textController.text);
+                                    });
                                   },
                                   icon: const Icon(Icons.search)),
                             ),
@@ -135,14 +146,16 @@ class _WeatherViewState extends State<WeatherView> {
                     ),
                     Expanded(
                       child: ListView.builder(
-                        shrinkWrap: true,
-                          itemCount: cidades.length,
+                          shrinkWrap: true,
+                          itemCount: weatherList?.length ?? 0,
                           itemBuilder: (context, index) {
-                            final item = snapshot.data;
+                            final item = weatherList?[index];
                             return ListItem(
-                                cityName: item?.cityName ?? "",
-                                temperature: item?.temperature ?? 0,
-                                description: item?.description ?? "");
+                              cityName: item?.cityName ?? "",
+                              temperature: item?.temperature ?? 0,
+                              description: item?.description ?? "",
+                              main: item?.mainConditions ?? "",
+                            );
                           }),
                     )
                   ],

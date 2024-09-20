@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'package:weather_app/utils/lottie_setter.dart';
 
 class ListItem extends StatelessWidget {
   final String cityName;
   final String description;
+  final String main;
   final double temperature;
 
   const ListItem({
     super.key,
     required this.cityName,
     required this.temperature,
-    required this.description
+    required this.description,
+    required this.main,
   });
 
   @override
@@ -21,13 +23,12 @@ class ListItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           ListTile(
-            leading: Lottie.asset('assets/sunny.json',
-                width: 48, height: 48, fit: BoxFit.fill),
+            leading: LottieSetter(main),
             title: Text(
-              cityName ?? "",
+              cityName,
             ),
             subtitle: Text(
-              "$description}\n${temperature.toStringAsFixed(1)} \u2103",
+              "$description\n${temperature.toStringAsFixed(1)} \u2103",
             ),
           ),
         ],

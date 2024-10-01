@@ -69,7 +69,7 @@ class _WeatherViewState extends State<WeatherView> {
   }
 
   Future<List<Weather>?> populateWeatherList() async {
-    if(weatherList.isEmpty) {
+    if (weatherList.isEmpty) {
       String cityName = await _service.getCurrentCity();
       _cities.insert(0, cityName);
     }
@@ -92,8 +92,39 @@ class _WeatherViewState extends State<WeatherView> {
         ? Icons.nightlight_round
         : Icons.sunny;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Clima", style: TextStyle(fontFamily: "Quicksand")),
+        body: CustomScrollView(slivers: [
+      SliverAppBar(
+        expandedHeight: 130,
+        floating: true,
+        pinned: false,
+        title: const Text("CLIMA"),
+        flexibleSpace: FlexibleSpaceBar(
+          background: Padding(
+            padding: const EdgeInsets.only(top: 100.0, left: 16, right: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    decoration: InputDecoration(
+                      hintText: "Digite uma cidade",
+                      prefixIcon: const Icon(Icons.home),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _weatherList = _searchWeather(
+                                  searchCity: _textController.text);
+                            });
+                          },
+                          icon: const Icon(Icons.search)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -107,63 +138,39 @@ class _WeatherViewState extends State<WeatherView> {
           )
         ],
       ),
-      body: FutureBuilder(
+      FutureBuilder(
         future: _weatherList,
         builder: (context, snapshot) {
           switch (snapshot.connectionState) {
             case ConnectionState.none:
-              return const Center(
-                child: Text("Error"),
+              return const SliverToBoxAdapter(
+                child: Center(
+                  child: Text("Error"),
+                ),
               );
             case ConnectionState.waiting:
-              return const Center(child: CircularProgressIndicator());
+              return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
             default:
-              return Padding(
-                padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _textController,
-                            decoration: InputDecoration(
-                              hintText: "Digite uma cidade",
-                              prefixIcon: const Icon(Icons.home),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _weatherList = _searchWeather(
-                                          searchCity: _textController.text);
-                                    });
-                                  },
-                                  icon: const Icon(Icons.search)),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: weatherList?.length ?? 0,
-                          itemBuilder: (context, index) {
-                            final item = weatherList?[index];
-                            return ListItem(
-                              cityName: item?.cityName ?? "",
-                              temperature: item?.temperature ?? 0,
-                              description: item?.description ?? "",
-                              main: item?.mainConditions ?? "",
-                            );
-                          }),
-                    )
-                  ],
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = weatherList[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: ListItem(
+                        cityName: item.cityName,
+                        temperature: item.temperature,
+                        description: item.description,
+                        main: item.mainConditions,
+                      ),
+                    );
+                  },
+                  childCount: weatherList.length,
                 ),
               );
           }
         },
       ),
-    );
+    ]));
   }
 }
